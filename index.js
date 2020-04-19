@@ -1,60 +1,35 @@
-
-
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
-/**
- * Respond with hello worker text
- * @param {Request} request
- */
- /*fetch('https://cfw-takehome.developers.workers.dev/api/variants')
- 	.then((response) => {
- 		return response.json();
- 	})
- 	.then((data)=>{
- 		console.log(data);
- 	})*/
 async function handleRequest(request) {
-	//Part one
-	let reqBody, stringify, parsestringify, firstUrl, secondUrl;
-	let parsestringifylen;
-	try{
-	reqBody = 'https://cfw-takehome.developers.workers.dev/api/variants';
-	const response = await fetch(reqBody);
-	const data = await response.json();
-	stringify = JSON.stringify(data);
-	parsestringify = JSON.parse(stringify);
-	parsestringifylen = parsestringify.variants.length;
-	//get length of array parsed
-	console.log(parsestringifylen);
-	firstUrl = parsestringify.variants[0];
-	secondUrl = parsestringify.variants[1];
-	/*console.log(stringify);
-	console.log(firstUrl);
-	console.log(secondUrl);*/
-	} catch(err){
-		if (err instanceof HttpError && err.response.status==404){
-			alert("No such");
-		} else{
-			throw err;
-		}
-	}
-	var index = Math.floor(Math.random() * parsestringifylen);
+    let reqBody, stringify, parsestringify, firstUrl, secondUrl;
+    let parsestringifylen;
 
-	//window.open (parsestringify.variants[index]);
-	request = parsestringify.variants[index]
-	openWin(request)
-	//window.open("request","_blank")
-	return new Response(request);
-
-}
-
-async function openWin(request){
-	myWindow = window.open("request","_blank")
-}
-//handleRequest('users').then(console.log);
-
-
-
-
-
+    reqBody = 'https://cfw-takehome.developers.workers.dev/api/variants';
+    const response = await fetch(reqBody);
+    const data = await response.json();
+    stringify = JSON.stringify(data);
+    parsestringify = JSON.parse(stringify);
+    parsestringifylen = parsestringify.variants.length;
+    firstUrl = parsestringify.variants[0];
+    secondUrl = parsestringify.variants[1];
+    
+    const NAME = 'experiment-0'
+    // Responses below are place holders, you could set up
+    // a custom path for each test (e.g. /control/somepath )
+    const TEST_RESPONSE =  fetch('https://cfw-takehome.developers.workers.dev/variants/1', request)
+    const CONTROL_RESPONSE =  fetch('https://cfw-takehome.developers.workers.dev/variants/2', request)
+    // Determine which group this requester is in.
+    const cookie = request.headers.get('cookie')
+    if (cookie && cookie.includes(`${NAME}=control`)) {
+      return CONTROL_RESPONSE
+    } else if (cookie && cookie.includes(`${NAME}=test`)) {
+      return TEST_RESPONSE
+    } else {
+      // if no cookie then this is a new client, decide a group and set the cookie
+      let group = Math.random() < 0.5 ? 'test' : 'control' // 50/50 split
+      let response = group === 'control' ? CONTROL_RESPONSE : TEST_RESPONSE
+      response.headers.append('Set-Cookie', `${NAME}=${group}; path=/`)
+      return response
+    }
+  }
+  addEventListener('fetch', event => {
+    event.respondWith(handleRequest(event.request))
+  })
